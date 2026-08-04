@@ -1,4 +1,4 @@
-# Training Center Management System API
+# Training Center Management System 
 
 A RESTful backend API for managing a training center, built using **ASP.NET Core Web API (.NET 8)** with a clean layered architecture.  
 The system provides secure authentication, role-based authorization, course management, and structured data access following modern backend development practices.
@@ -41,9 +41,9 @@ The system provides secure authentication, role-based authorization, course mana
 
 
 ## 🏗️ Architecture
-
 The project follows a layered architecture:
 
+```
 TrainingCenterAPI
 │
 ├── Controllers
@@ -69,7 +69,7 @@ TrainingCenterAPI
 │
 └── Data
     └── Entity Framework Core DbContext
-
+```
 
 ## 🛠️ Technologies Used
 
@@ -159,6 +159,7 @@ dotnet run
 
 ### 📂 Project Structure
 
+```
 TrainingCenterAPI
 │
 ├── Controllers
@@ -170,6 +171,7 @@ TrainingCenterAPI
 ├── Validators
 ├── Middleware
 └── Program.cs
+```
 
 ### 📈 Future Improvements
 
@@ -184,13 +186,17 @@ Docker deployment
 
 ## 📷 Preview
 <p align="center">
-  <img src="Images/MainScreen.png" width="30%" alt="Main Screen">
-  <img src="Images/Start.png" width="30%" alt="Start">
-  <img src="Images/End.png" width="30%" alt="End">
+  <img src="Images/Admins.png" width="30%" alt="Admins">
+  <img src="Images/Authintecations.png" width="30%" alt="Authentications">
+  <img src="Images/Courses.png" width="30%" alt="Courses">
+  <img src="Images/Enrollments.png" width="30%" alt="Enrollments">
+  <img src="Images/Instructors.png" width="30%" alt="Instructors">
+  <img src="Images/Students.png" width="30%" alt="Students">
 </p>
 
 ### 👨‍💻 Author
 
-Hazem Ahmad- GitHub: https://github.com/HazemAhmadHaz
+Hazem Ahmad
+- GitHub: https://github.com/HazemAhmadHaz
 - LinkedIn: https://www.linkedin.com/in/hazem-ahmad-haz
 - Email: HazemAhmad01234@gmail.com
