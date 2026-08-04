@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\Marhaba\\\\source\\\\repos\\\\Backend\\\\TrainingCenterProject\\\\TrainingCenterAPI\\\\Utilities\\\\Validators\")",
+      "Bash(findstr /i student)",
+      "Bash(dir C:\\\\Users\\\\Marhaba\\\\source\\\\repos\\\\Backend\\\\TrainingCenterProject\\\\TrainingCenterAPI *)",
+      "Bash(dir C:\\\\Users\\\\Marhaba\\\\source\\\\repos\\\\Backend\\\\TrainingCenterProject\\\\TrainingCenterAPI\\\\Controllers *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet clean *)",
+      "Bash(tail -5 \"C:/Users/Marhaba/source/repos/Backend/TrainingCenterProject/TrainingCenterAPI/Program.cs\")",
+      "Bash(echo \"app.UseHttpsRedirection\\(\\);\")",
+      "Bash(echo \"\")",
+      "Bash(echo \"app.UseAuthentication\\(\\);    // MUST come before Authorization\")",
+      "Bash(echo \"app.UseAuthorization\\(\\);\")",
+      "Bash(curl *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5178)",
+      "PowerShell(Get-Process *)"
+    ]
+  }
+}

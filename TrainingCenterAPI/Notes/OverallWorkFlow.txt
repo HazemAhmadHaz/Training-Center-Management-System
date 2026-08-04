@@ -1,0 +1,100 @@
+﻿**Overall architecture:** Layered Web API — Controller → Service → Repository → DbContext → SQL Server, with cross-cutting utilities (validation, filters, exception handling) shared across all entities.
+
+**Request flow (e.g., POST /api/courses):**
+1. Request hits `CoursesController`
+2. FluentValidation (`CreateCourseDtoValidator`) checks DTO shape — runs automatically, before controller code executes
+3. Controller calls `CourseService`
+4. Service runs business rules (`BusinessRuleHelper` + repository existence checks — code unique, instructor exists)
+5. Service calls `CourseRepository` (data access)
+6. Repository talks to `TrainingCenterDbContext` → SQL Server
+7. Result flows back up: Repository → Service → Controller → JSON response
+8. Any thrown exception is caught globally by `ExceptionHandlingMiddleware`, converted to a clean 400/500
+
+**Folders and their job:**
+
+| Folder | Purpose |
+|---|---|
+| `Models` | Scaffolded EF Core entities (raw DB tables as C# classes) |
+| `Data` | `TrainingCenterDbContext` — EF Core's DB connection/config |
+| `DTOs` | Shapes sent to/from the client (never expose raw entities) |
+| `Enums` | `CourseStatus`, `CourseLevel`, etc. — replace magic strings/numbers |
+| `Repositories/Interfaces` + `Implementations` | Data access layer; `IRepository<T>`/`Repository<T>` = generic CRUD, `ICourseRepository`/`CourseRepository` = Course-specific queries |
+| `Services/Interfaces` + `Implementations` | Business logic layer; validates rules, orchestrates repository calls |
+| `Controllers` | HTTP layer; thin, just calls services and shapes responses |
+| `Validators` | FluentValidation rules for DTO shape (sync only, no DB) |
+| `Utilities/Filters` | `[ValidateId]` — reusable route-parameter validation |
+| `Utilities/Middleware` | `ExceptionHandlingMiddleware` — catches business-rule exceptions globally |
+| `Utilities/Helpers` | `ApiResponseHelper` (404/empty responses), `BusinessRuleHelper` (throw-if-condition) |
+
+**SOLID applied:** each layer/class has one job (S), interfaces let you swap implementations (O, L), interfaces are entity-specific not bloated (I), everything depends on abstractions via constructor injection registered in `Program.cs` (D).
+
+Send filenames one at a time whenever ready and I'll give per-file summaries.
+
+
+Overall architecture
+At this point, your Course implementation looks roughly like:
+
+
+                    HTTP Request
+                         │
+                         ▼
+                  Exception Middleware
+                         │
+                         ▼
+                   ValidateId Filter
+                         │
+                         ▼
+                     Controller
+                         │
+                         ▼
+                  ICourseService
+                         │
+                         ▼
+                   CourseService
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+              ▼                     ▼
+     BusinessRuleHelper       ICourseRepository
+                                    │
+                                    ▼
+                            CourseRepository
+                                    │
+                                    ▼
+                              Repository<Course>
+                                    │
+                                    ▼
+                               DbContext
+                                    │
+                                    ▼
+                                SQL Server
+
+And validation sits alongside that:
+
+
+                    Request DTO
+                        │
+                        ▼
+                    FluentValidation
+                        │
+                        ├── invalid shape → 400
+                        │
+                        └── valid
+                              │
+                              ▼
+                           Controller
+                              │
+                              ▼
+                           Service
+                              │
+                              ├── business rule violation
+                              │       ↓
+                              │ BusinessRuleException
+                              │       ↓
+                              │ Middleware → 400
+                              │
+                              └── entity missing
+                                      ↓
+                                 NotFoundException
+                                      ↓
+                                 Middleware → 404

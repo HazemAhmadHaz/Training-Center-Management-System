@@ -1,0 +1,134 @@
+using TrainingCenterAPI.DTOs;
+using TrainingCenterAPI.Enums;
+using TrainingCenterAPI.Models;
+using TrainingCenterAPI.Repositories.Interfaces;
+using TrainingCenterAPI.Services.Interfaces;
+using TrainingCenterAPI.Services.Security;
+using TrainingCenterAPI.Utilities.Exceptions;
+using TrainingCenterAPI.Utilities.Helpers;
+
+namespace TrainingCenterAPI.Services.Implementations;
+
+public class StudentService : IStudentService
+{
+    private readonly IStudentRepository _studentRepository;
+    private readonly IPasswordHasher _passwordHasher;
+
+    public StudentService(IStudentRepository studentRepository, IPasswordHasher passwordHasher)
+    {
+        _studentRepository = studentRepository;
+        _passwordHasher = passwordHasher;
+    }
+
+    public async Task<(IEnumerable<StudentDto> Items, int TotalCount)> GetAllStudentsAsync(StudentStatus? status, int page, int pageSize)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+        return await _studentRepository.GetAllProjectedAsync(status, page, pageSize);
+    }
+
+    public async Task<StudentDto> GetStudentByIdAsync(int id)
+    {
+        var student = await _studentRepository.GetByIdProjectedAsync(id);
+        return student ?? throw new NotFoundException($"Student with ID {id} not found.");
+    }
+
+    public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
+    {
+        BusinessRuleHelper.ThrowIfExists(
+            await _studentRepository.EmailExistsAsync(dto.Email),
+            $"Student email '{dto.Email}' already exists.");
+
+        var student = new Student
+        {
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            Email = dto.Email,
+            DateOfBirth = dto.DateOfBirth,
+            PhoneNumber = dto.PhoneNumber,
+            Status = StudentStatus.Active,
+            RegisteredAt = DateTime.UtcNow,
+            PasswordHash = "", // Will be updated later by AuthController
+            Role = "Student" // Default role for students
+        };
+
+        await _studentRepository.AddAsync(student);
+        await _studentRepository.SaveChangesAsync();
+
+        return (await _studentRepository.GetByIdProjectedAsync(student.StudentId))!;
+    }
+
+    public async Task UpdateStudentAsync(int id, UpdateStudentDto dto)
+    {
+        var student = await _studentRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Student with ID {id} not found.");
+
+        BusinessRuleHelper.ThrowIfExists(
+            await _studentRepository.EmailExistsAsync(dto.Email, id),
+            $"Student email '{dto.Email}' already exists.");
+
+        EnsureValidStatusTransition(student.Status, dto.Status);
+
+        student.FirstName = dto.FirstName;
+        student.LastName = dto.LastName;
+        student.Email = dto.Email;
+        student.DateOfBirth = dto.DateOfBirth;
+        student.PhoneNumber = dto.PhoneNumber;
+        student.Status = dto.Status;
+
+        _studentRepository.Update(student);
+        await _studentRepository.SaveChangesAsync();
+    }
+
+    public async Task DeleteStudentAsync(int id)
+    {
+        var student = await _studentRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Student with ID {id} not found.");
+
+        BusinessRuleHelper.ThrowIfExists(
+            await _studentRepository.HasEnrollmentsAsync(id),
+            "Cannot delete a student with enrollment history.");
+
+        _studentRepository.Delete(student);
+        await _studentRepository.SaveChangesAsync();
+    }
+
+    public async Task<bool> EmailExistsAsync(string email, int? excludeStudentId = null)
+    {
+        return await _studentRepository.EmailExistsAsync(email, excludeStudentId);
+    }
+
+    public async Task<StudentDto?> GetStudentByEmailAsync(string email)
+    {
+        var student = await _studentRepository.GetByEmailAsync(email);
+        return student == null ? null : await _studentRepository.GetByIdProjectedAsync(student.StudentId);
+    }
+
+    /// <summary>
+    /// Checks whether a student is allowed to change from their current status
+    /// to the requested status.
+    ///
+    /// Allowed transitions:
+    /// Active → Suspended or Graduated
+    /// Suspended → Active
+    /// Graduated → cannot change to another status
+    ///
+    /// Keeping the same status is always allowed.
+    /// If the transition is invalid, a BusinessRuleException is thrown.
+    /// </summary>
+
+    private static void EnsureValidStatusTransition(StudentStatus current, StudentStatus requested)
+    {
+        var isValid = current == requested || current switch
+        {
+            StudentStatus.Active => requested is StudentStatus.Suspended or StudentStatus.Graduated,
+            StudentStatus.Suspended => requested == StudentStatus.Active,
+            StudentStatus.Graduated => false,
+            _ => false
+        };
+
+        BusinessRuleHelper.ThrowIfNotExists(
+            isValid,
+            $"Cannot change student status from {current} to {requested}.");
+    }
+}
